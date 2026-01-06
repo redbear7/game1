@@ -1,0 +1,7 @@
+{
+  "name": "Rhythm Word Quest",
+  "description": "A rhythm-based word quiz game where cards appear and animate in sync with a musical beat. Perfect for educational themes like Bible studies.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
