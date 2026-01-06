@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { GameStatus, LeaderboardEntry } from '../types';
 
@@ -14,6 +15,7 @@ interface HeaderProps {
   isStopped: boolean;
   leaderboard: LeaderboardEntry[];
   topRankerName: string;
+  onResetRanking: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -28,9 +30,23 @@ const Header: React.FC<HeaderProps> = ({
   elapsedTimeFormatted,
   isStopped,
   leaderboard,
-  topRankerName
+  topRankerName,
+  onResetRanking
 }) => {
   const progressPercent = (cycleCount / maxCycles) * 100;
+
+  const handleResetClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // 게임 진행 중에는 초기화를 막음 (실수로 누르는 것 방지)
+    if (status === GameStatus.PLAYING) {
+      alert("게임 진행 중에는 순위를 초기화할 수 없습니다.");
+      return;
+    }
+    
+    onResetRanking();
+  };
 
   return (
     <header className="w-full mb-8 space-y-4">
@@ -101,11 +117,11 @@ const Header: React.FC<HeaderProps> = ({
           </div>
           <div className="text-left">
             <h1 className="text-[9px] font-black text-amber-600 tracking-widest uppercase mb-1">Stage</h1>
-            <p className="text-xl font-black text-stone-800 leading-tight korean-gothic">{themeName}</p>
+            <p className="text-xl font-black text-stone-800 korean-gothic">{themeName}</p>
           </div>
         </div>
 
-        {/* 중앙: 타이머 (기울임 유지 - 타이머의 역동성 위해) */}
+        {/* 중앙: 타이머 */}
         <div className="flex flex-col items-center justify-center px-4 min-w-[180px]">
            <p className={`text-[10px] uppercase font-black mb-1 tracking-[0.3em] ${status === GameStatus.PAUSED ? 'text-amber-600' : isStopped ? 'text-red-500' : 'text-stone-400'}`}>
              {status === GameStatus.PAUSED ? 'PAUSED' : isStopped ? 'STOPPED' : 'ELAPSED'}
@@ -115,7 +131,7 @@ const Header: React.FC<HeaderProps> = ({
            </p>
         </div>
         
-        {/* 우측: 1위 챔피언 영역 (이름 정중앙 정렬 수정) */}
+        {/* 우측: 1위 챔피언 영역 */}
         <div className="flex items-center gap-2 pr-2 flex-grow lg:flex-grow-[3] min-w-0">
           <div className="bg-stone-900 text-white rounded-[2.5rem] px-8 py-5 flex flex-col items-center justify-center min-w-[320px] flex-grow shadow-2xl border-t border-white/10 relative overflow-hidden">
             <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-amber-500/10 to-transparent pointer-events-none rounded-r-[2.5rem]"></div>
@@ -123,11 +139,9 @@ const Header: React.FC<HeaderProps> = ({
             <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em] mb-1 whitespace-nowrap opacity-80 text-center relative z-10">Champion Hall of Fame</p>
             
             <div className="relative w-full flex items-center justify-center py-1">
-              {/* "1위" 문구를 좌측에 절대 위치로 배치하여 이름의 중앙 정렬에 영향을 주지 않도록 함 */}
               <span className="absolute left-0 text-xl font-black text-stone-600 uppercase hidden sm:block">1위</span>
               
               <div className="min-w-0 overflow-visible px-4">
-                {/* 이름 텍스트: 기울임 완전 제거, 정중앙 정렬 */}
                 <span className="text-4xl sm:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700 leading-tight korean-gothic drop-shadow-md whitespace-nowrap block text-center not-italic">
                   {topRankerName}
                 </span>
@@ -135,12 +149,28 @@ const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          <div className={`
-            hidden xl:flex w-24 h-24 rounded-full items-center justify-center border-4 font-black transition-all rotate-12 shadow-lg shrink-0
-            ${status === GameStatus.PLAYING ? 'bg-green-500 border-green-300 text-white animate-pulse' : 'bg-white border-stone-200 text-stone-300'}
-          `}>
-            <span className="text-xs uppercase transform -rotate-12">{status === GameStatus.PLAYING ? 'ON AIR' : 'OFF'}</span>
-          </div>
+          {/* 리셋 버튼: lg 화면부터 보이도록 hidden lg:flex로 수정 및 핸들러 명시적 연결 */}
+          <button 
+            onClick={handleResetClick}
+            className={`
+              hidden lg:flex w-24 h-24 rounded-full items-center justify-center border-4 font-black transition-all rotate-12 shadow-lg shrink-0 group/reset
+              ${status === GameStatus.PLAYING 
+                ? 'bg-green-500 border-green-300 text-white animate-pulse cursor-default' 
+                : 'bg-white border-stone-200 text-stone-300 hover:border-red-500 hover:text-red-500 active:scale-95'}
+            `}
+            title={status === GameStatus.PLAYING ? '게임 진행 중' : '순위 초기화'}
+          >
+            <div className="flex flex-col items-center transform -rotate-12">
+              {status === GameStatus.PLAYING ? (
+                <span className="text-xs uppercase">ON AIR</span>
+              ) : (
+                <>
+                  <i className="fa-solid fa-rotate-left text-xl mb-1 group-hover/reset:animate-spin-slow"></i>
+                  <span className="text-[10px] uppercase">RESET</span>
+                </>
+              )}
+            </div>
+          </button>
         </div>
       </div>
 
@@ -154,6 +184,13 @@ const Header: React.FC<HeaderProps> = ({
         }
         .pause-marquee {
           animation-play-state: paused;
+        }
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(-360deg); }
+        }
+        .group-hover\/reset\:animate-spin-slow:hover i {
+          animation: spin-slow 1s linear infinite;
         }
       `}</style>
     </header>
