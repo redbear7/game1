@@ -4,45 +4,40 @@ import { LevelData } from './types';
 export const MIN_BPM = 60;
 export const MAX_BPM = 300;
 export const DEFAULT_BPM = 182; 
-export const DEFAULT_AUDIO_URL = 'https://pixabay.com/music/download/upbeat-rhythmic-percussion-222855.mp3'; // 샘플 비트 음원
+export const DEFAULT_AUDIO_URL = 'https://pixabay.com/music/download/upbeat-rhythmic-percussion-222855.mp3';
 
 const createInitialCards = (levelId: number): any[] => {
   const isOdd = levelId % 2 !== 0;
+  // 홀수 레벨: 할렐루야 할렐루야 (8칸)
+  // 짝수 레벨: 기본 리듬 단어 세트 (8칸)
   const words = isOdd 
     ? ['할', '렐', '루', '야', '할', '렐', '루', '야']
-    : ['준비', '시작', '박자', '리듬', '집중', '도전', '성공', '최고'];
+    : ['리', '듬', '파', '워', '액', '션', '성', '공'];
   
   return words.map((word, index) => ({
-    id: String(index + 1),
+    id: `${levelId}-${index + 1}`,
     word,
-    description: isOdd ? 'Praise' : 'Basic'
+    description: isOdd ? 'PRAISE' : 'RHYTHM'
   }));
 };
 
-export const INITIAL_GAME_DATA: LevelData[] = Array.from({ length: 9 }, (_, i) => ({
-  id: i + 1,
-  theme: `레벨 ${i + 1}`,
-  bpm: DEFAULT_BPM,
-  cards: createInitialCards(i + 1),
-}));
+export const INITIAL_GAME_DATA: LevelData[] = Array.from({ length: 9 }, (_, i) => {
+  const levelId = i + 1;
+  const isOdd = levelId % 2 !== 0;
+  return {
+    id: levelId,
+    theme: isOdd ? '할렐루야' : `도전 스테이지 ${levelId}`,
+    bpm: DEFAULT_BPM,
+    cards: createInitialCards(levelId),
+  };
+});
 
 export const SYSTEM_INSTRUCTION = `
-당신은 리듬 게임의 전체 스테이지 생성기입니다.
-하나의 큰 주제를 받으면, 그와 관련된 9개의 레벨(스테이지) 데이터를 생성하십시오.
-각 레벨은 주제의 하위 카테고리나 발전된 형태의 테마를 가집니다.
-각 레벨마다 '한글 2글자' 단어 8개를 생성하십시오.
-설명은 아주 짧게 5자 이내로 작성하십시오.
-반드시 다음 JSON 형식을 유지하십시오:
-{
-  "levels": [
-    {
-      "id": 1,
-      "theme": "레벨 테마 이름",
-      "cards": [
-        { "id": "1", "word": "단어", "description": "설명" }
-      ]
-    },
-    ... 총 9개의 레벨 객체
-  ]
-}
+당신은 리듬 게임 스테이지 기획자입니다.
+주제를 받으면 9개 레벨의 데이터를 생성하십시오.
+[필수 규칙]
+1. 각 레벨은 'cards' 배열에 8개의 객체를 가져야 합니다.
+2. 'word'는 반드시 한글 '딱 2글자'여야 합니다.
+3. 사용자가 어떤 주제를 주든, 당신은 9개 레벨 모두를 생성하되, 시스템에서 짝수 레벨(2, 4, 6, 8)의 데이터를 중점적으로 활용할 것임을 인지하십시오.
+4. JSON 형식만 출력하십시오.
 `;

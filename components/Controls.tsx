@@ -1,11 +1,10 @@
+
 import React, { useState, useRef } from 'react';
 import { GameStatus } from '../types';
 import { MIN_BPM, MAX_BPM, DEFAULT_BPM } from '../constants';
 
 interface ControlsProps {
   status: GameStatus;
-  userName: string;
-  setUserName: (name: string) => void;
   bpm: number;
   setBpm: (bpm: number) => void;
   onStart: () => void;
@@ -21,19 +20,14 @@ interface ControlsProps {
   updateDelay: (index: number, val: number) => void;
   onExport: () => void;
   onImport: (file: File) => void;
-  onOpenKeyConfig: () => void;
   onSaveCurrent: () => void;
   onSaveAudioToDevice: () => void;
   onResetAudio: () => void;
-  onResetRanking: () => void;
-  hasApiKey: boolean;
   loading: boolean;
 }
 
 const Controls: React.FC<ControlsProps> = ({ 
   status, 
-  userName,
-  setUserName,
   bpm, 
   setBpm, 
   onStart, 
@@ -49,12 +43,9 @@ const Controls: React.FC<ControlsProps> = ({
   updateDelay,
   onExport,
   onImport,
-  onOpenKeyConfig,
   onSaveCurrent,
   onSaveAudioToDevice,
   onResetAudio,
-  onResetRanking,
-  hasApiKey,
   loading
 }) => {
   const [themeInput, setThemeInput] = useState('');
@@ -76,35 +67,13 @@ const Controls: React.FC<ControlsProps> = ({
     <div className="w-full max-w-4xl space-y-6 mt-8 animate-in fade-in slide-in-from-bottom duration-700">
       <div className="bg-white/60 backdrop-blur-md p-6 rounded-[2.5rem] border border-white shadow-2xl space-y-6">
         
-        {!hasApiKey && (
-          <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <i className="fa-solid fa-triangle-exclamation text-red-500 animate-pulse"></i>
-              <p className="text-xs font-black text-red-800 uppercase tracking-wider">AI 기능을 사용하려면 API 키 설정이 필요합니다</p>
-            </div>
-            <button onClick={onOpenKeyConfig} className="text-[10px] font-black bg-red-600 text-white px-3 py-1.5 rounded-lg shadow-sm">설정하기</button>
-          </div>
-        )}
-
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="flex flex-col gap-4 min-w-[320px] flex-grow">
             <div className="flex flex-wrap items-center gap-3">
-              <div className="relative group">
-                <input 
-                    type="text" 
-                    placeholder="도전자 이름"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    className="px-4 py-5 rounded-2xl bg-white border-2 border-stone-100 focus:border-amber-400 outline-none font-black text-xl w-48 shadow-inner text-center"
-                    disabled={status === GameStatus.PLAYING || status === GameStatus.PAUSED}
-                />
-                <div className="absolute -top-3 left-4 px-2 bg-white text-[10px] font-black text-amber-500 uppercase">Challenger</div>
-              </div>
-
               {status === GameStatus.IDLE ? (
                 <button 
                   onClick={onStart}
-                  className="px-10 py-5 bg-stone-800 text-white rounded-2xl font-black shadow-xl hover:bg-stone-700 active:scale-95 transition-all flex items-center gap-3 text-2xl"
+                  className="px-12 py-5 bg-stone-800 text-white rounded-2xl font-black shadow-xl hover:bg-stone-700 active:scale-95 transition-all flex items-center gap-3 text-2xl"
                 >
                   <i className="fa-solid fa-play"></i>
                   도전 시작
@@ -112,7 +81,7 @@ const Controls: React.FC<ControlsProps> = ({
               ) : status === GameStatus.PAUSED ? (
                 <button 
                   onClick={onResume}
-                  className="px-10 py-5 bg-amber-500 text-white rounded-2xl font-black shadow-xl hover:bg-amber-600 active:scale-95 transition-all flex items-center gap-3 text-2xl"
+                  className="px-12 py-5 bg-amber-500 text-white rounded-2xl font-black shadow-xl hover:bg-amber-600 active:scale-95 transition-all flex items-center gap-3 text-2xl"
                 >
                   <i className="fa-solid fa-play"></i>
                   계속하기
@@ -121,13 +90,13 @@ const Controls: React.FC<ControlsProps> = ({
                 <div className="flex gap-2">
                    <button 
                     onClick={onPause}
-                    className="px-6 py-5 bg-stone-500 text-white rounded-2xl font-black shadow-xl hover:bg-stone-600 active:scale-95 transition-all flex items-center gap-3 text-2xl"
+                    className="px-8 py-5 bg-stone-500 text-white rounded-2xl font-black shadow-xl hover:bg-stone-600 active:scale-95 transition-all flex items-center gap-3 text-2xl"
                   >
                     <i className="fa-solid fa-pause"></i>
                   </button>
                   <button 
                     onClick={onStop}
-                    className="px-10 py-5 bg-red-500 text-white rounded-2xl font-black shadow-xl hover:bg-red-600 active:scale-95 transition-all flex items-center gap-3 text-2xl"
+                    className="px-12 py-5 bg-red-500 text-white rounded-2xl font-black shadow-xl hover:bg-red-600 active:scale-95 transition-all flex items-center gap-3 text-2xl"
                   >
                     <i className="fa-solid fa-stop"></i>
                     중단
@@ -145,10 +114,10 @@ const Controls: React.FC<ControlsProps> = ({
                   <i className="fa-solid fa-music text-xl"></i>
                 </button>
                 <button 
-                  onClick={onSaveAudioToDevice}
+                  onClick={onSaveCurrent}
                   className="px-4 bg-stone-800 text-amber-400 border-y-2 border-stone-800 hover:bg-stone-900 transition-all"
-                  title="음원 기기에 저장 (자동 로딩)"
-                  disabled={status !== GameStatus.IDLE || !audioName || audioName === '기본 배경음악'}
+                  title="현재 설정 저장"
+                  disabled={status !== GameStatus.IDLE}
                 >
                   <i className="fa-solid fa-save text-sm"></i>
                 </button>
@@ -228,18 +197,17 @@ const Controls: React.FC<ControlsProps> = ({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {/* AI 주제 입력창: 테두리를 더 눈에 띄게 (border-amber-200) 하고 포커스 링 효과 추가 */}
           <input 
             type="text" 
-            placeholder={hasApiKey ? "주제를 입력해 AI로 단어를 생성하세요 (예: 성경 단어, 우주, 동물...)" : "API 키를 먼저 설정해주세요"} 
+            placeholder="주제를 입력해 AI로 단어를 생성하세요" 
             value={themeInput} 
             onChange={(e) => setThemeInput(e.target.value)} 
-            className={`flex-grow px-6 py-4 rounded-2xl border-4 font-bold outline-none transition-all shadow-inner ${hasApiKey ? 'bg-white border-amber-200 hover:border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10' : 'bg-stone-50 border-red-100 cursor-not-allowed'}`}
-            disabled={status !== GameStatus.IDLE || !hasApiKey} 
+            className="flex-grow px-6 py-4 rounded-2xl border-4 font-bold outline-none transition-all shadow-inner bg-white border-amber-200 hover:border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10"
+            disabled={status !== GameStatus.IDLE} 
           />
           <button 
             onClick={() => { if (themeInput.trim()) { onThemeChange(themeInput); setThemeInput(''); } }} 
-            disabled={!themeInput.trim() || status !== GameStatus.IDLE || !hasApiKey || loading} 
+            disabled={!themeInput.trim() || status !== GameStatus.IDLE || loading} 
             className="px-10 bg-amber-500 text-white rounded-2xl font-black hover:bg-amber-600 disabled:opacity-50 transition-all shadow-lg active:translate-y-1 flex items-center gap-2 py-4"
           >
             {loading && <i className="fa-solid fa-spinner animate-spin"></i>}
@@ -256,14 +224,6 @@ const Controls: React.FC<ControlsProps> = ({
         >
           <i className="fa-solid fa-floppy-disk"></i>
           현재 설정 저장
-        </button>
-        <button 
-          onClick={onResetRanking}
-          className="flex items-center gap-2 px-5 py-3 bg-red-600 text-white rounded-2xl font-black text-sm hover:bg-red-700 transition-all shadow-md active:scale-95"
-          disabled={status !== GameStatus.IDLE}
-        >
-          <i className="fa-solid fa-trash-can"></i>
-          순위 초기화
         </button>
         <button 
           onClick={onExport}

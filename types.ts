@@ -19,15 +19,13 @@ export enum GameStatus {
   FINISHED = 'FINISHED',
 }
 
-export interface LeaderboardEntry {
-  name: string;
-  score: number;
-  time: string;
-  elapsedTime: number; // 정렬을 위한 밀리초 값
-  level: number; // 도달한 레벨
-  date: string;
-}
-
 export interface GameState {
   levels: LevelData[];
+}
+
+// Added missing interface to fix the error in Leaderboard.tsx
+export interface LeaderboardEntry {
+  name: string;
+  time: string;
+  level: number;
 }

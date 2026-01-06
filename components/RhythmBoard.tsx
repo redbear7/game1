@@ -33,7 +33,7 @@ const RhythmBoard: React.FC<RhythmBoardProps> = ({
     // 박자가 정확할 때만 효과 표시
     if (index === activeBeat) {
       setSuccessEffect(index);
-      setTimeout(() => setSuccessEffect(null), 200);
+      setTimeout(() => setSuccessEffect(null), 150);
     }
     
     onCardClick(index);
@@ -81,11 +81,11 @@ const RhythmBoard: React.FC<RhythmBoardProps> = ({
             className={`
               relative cursor-pointer transition-all duration-150 transform
               bg-white rounded-[2.5rem] shadow-lg border-8 flex flex-col items-center justify-center
-              active:scale-90 select-none overflow-hidden group min-h-[160px]
+              active:scale-95 select-none overflow-hidden group min-h-[160px]
               ${isActive 
                 ? 'active-beat border-amber-400 z-10 scale-105 shadow-amber-500/40' 
                 : 'border-white opacity-95 hover:border-stone-100'}
-              ${isSuccess ? 'bg-amber-400 ring-8 ring-amber-300 animate-ping' : ''}
+              ${isSuccess ? 'bg-amber-100 border-amber-500 ring-4 ring-amber-300' : ''}
               ${isPaused ? 'cursor-not-allowed pointer-events-none' : ''}
             `}
           >
@@ -98,7 +98,7 @@ const RhythmBoard: React.FC<RhythmBoardProps> = ({
               </button>
             )}
 
-            <div className={`text-center p-2 w-full flex flex-col items-center justify-center transition-transform ${isSuccess ? 'scale-125' : ''}`}>
+            <div className={`text-center p-2 w-full flex flex-col items-center justify-center transition-transform ${isSuccess ? 'scale-110' : ''}`}>
               {editingCardId === card.id ? (
                 <div className="flex flex-col items-center gap-4">
                   <input
@@ -119,12 +119,11 @@ const RhythmBoard: React.FC<RhythmBoardProps> = ({
                     korean-gothic tracking-tighter leading-tight transition-all
                     text-6xl sm:text-7xl md:text-8xl break-all
                     ${isActive ? 'text-amber-500' : 'text-stone-800'}
-                    ${isSuccess ? 'text-white' : ''}
                   `}>
                     {card.word || '?'}
                   </h3>
                   {card.description && (
-                    <p className={`text-sm font-bold mt-2 uppercase truncate w-full px-4 ${isSuccess ? 'text-amber-100' : 'text-stone-400 opacity-60'}`}>
+                    <p className={`text-sm font-bold mt-2 uppercase truncate w-full px-4 text-stone-400 opacity-60`}>
                       {card.description}
                     </p>
                   )}
@@ -134,11 +133,6 @@ const RhythmBoard: React.FC<RhythmBoardProps> = ({
             
             {!isPaused && isActive && (
               <div className="absolute inset-0 bg-amber-50/20 animate-pulse pointer-events-none"></div>
-            )}
-            {isSuccess && (
-              <div className="absolute inset-0 bg-amber-500 flex items-center justify-center z-30">
-                <span className="text-white font-black text-4xl animate-bounce">+5</span>
-              </div>
             )}
           </div>
         );
