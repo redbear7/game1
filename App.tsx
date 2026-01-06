@@ -13,7 +13,7 @@ const DELAYS_KEY = 'rhythm_quest_v6_delays';
 const CYCLES_PER_LEVEL = 1; 
 
 const App: React.FC = () => {
-  // 상태 관리: 로컬 스토리지에서 저장된 데이터 로드 (현재 값을 디폴트로 유지)
+  // 현재 상태를 디폴트로 유지하기 위해 로컬 스토리지 로드
   const [levels, setLevels] = useState<LevelData[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -42,7 +42,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [cycleCount, setCycleCount] = useState(0);
   
-  // 음원 관리: 초기 로딩 시 IndexedDB 확인
+  // 음원 관리: IndexedDB를 통한 영구 내장 및 자동 로딩
   const [audioUrl, setAudioUrl] = useState<string | null>(DEFAULT_AUDIO_URL);
   const [audioName, setAudioName] = useState<string | null>('기본 배경음악');
   const [currentAudioBlob, setCurrentAudioBlob] = useState<Blob | null>(null);
@@ -62,25 +62,29 @@ const App: React.FC = () => {
 
   const currentLevel = levels.find(l => l.id === currentLevelId) || levels[0];
 
-  // 음원 파일 자동 로딩 및 내장
-  useEffect(() => {
-    const loadSavedAudioFile = async () => {
-      try {
-        const saved = await getSavedAudio();
-        if (saved) {
-          const url = URL.createObjectURL(saved.blob);
-          setAudioUrl(url);
-          setAudioName(saved.name);
-          setCurrentAudioBlob(saved.blob);
-        }
-      } catch (e) {
-        console.error("Audio Load Error", e);
+  // 기기 저장 음원 자동 로드
+  const loadStoredAudio = useCallback(async () => {
+    try {
+      const saved = await getSavedAudio();
+      if (saved) {
+        if (audioUrl && audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
+        const url = URL.createObjectURL(saved.blob);
+        setAudioUrl(url);
+        setAudioName(saved.name);
+        setCurrentAudioBlob(saved.blob);
+        return saved.name;
       }
-    };
-    loadSavedAudioFile();
+    } catch (e) {
+      console.error("Audio Auto Load Fail", e);
+    }
+    return null;
+  }, [audioUrl]);
+
+  useEffect(() => {
+    loadStoredAudio();
   }, []);
 
-  // 데이터 변경 시 자동 저장
+  // 설정 실시간 저장 (현재 값을 디폴트값으로 유지)
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(levels));
   }, [levels]);
@@ -215,21 +219,12 @@ const App: React.FC = () => {
     timerRef.current = requestAnimationFrame(update);
   }, [audioUrl, currentLevelId]);
 
-  const stopGame = useCallback(() => {
-    finishGame();
-    setIsStoppedManually(true);
-    if (bgMusicRef.current) {
-      bgMusicRef.current.pause();
-      bgMusicRef.current.currentTime = 0;
-    }
-  }, [finishGame]);
-
   const handleThemeChange = async (newTheme: string) => {
     setLoading(true);
     try {
       const data = await generateThemedCards(newTheme);
       if (data && Array.isArray(data.levels)) {
-        // AI 생성 로직: 홀수 레벨은 "할렐루야", 짝수 레벨만 유저 테마 적용
+        // 홀수 레벨은 "할렐루야", 짝수 레벨만 AI 결과 적용
         const processedLevels = data.levels.map((l: any, idx: number) => {
           const levelId = idx + 1;
           const isOdd = levelId % 2 !== 0;
@@ -239,7 +234,7 @@ const App: React.FC = () => {
               theme: '할렐루야',
               bpm: l.bpm || DEFAULT_BPM,
               cards: ['할', '렐', '루', '야', '할', '렐', '루', '야'].map((word, i) => ({
-                id: `hallelujah-${levelId}-${i}`,
+                id: `hall-${levelId}-${i}`,
                 word,
                 description: 'PRAISE'
               }))
@@ -253,49 +248,63 @@ const App: React.FC = () => {
           };
         });
         setLevels(processedLevels);
+        setCurrentLevelId(1);
         setStatus(GameStatus.IDLE);
         setElapsedTime(0);
-        setCurrentLevelId(1);
+        alert("AI 스테이지 생성이 완료되었습니다. 홀수 레벨은 할렐루야로 고정되었습니다.");
       }
     } catch (error) {
-      alert("AI 스테이지 생성 중 오류가 발생했습니다.");
+      alert("AI 생성 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleExport = () => {
-    // 음원 경로값(audioUrl)과 이름(audioName)을 포함하여 내보내기
-    const data = JSON.stringify({ 
-      levels, 
-      levelDelays, 
-      isAudioSynced, 
-      audioName, 
-      audioUrl 
-    }, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
+    // 음원 URL 대신 기기 내 식별 가능한 파일명을 기록
+    const exportData = {
+      levels,
+      levelDelays,
+      isAudioSynced,
+      audioName: audioName,
+      localAudioPath: audioName && audioName !== '기본 배경음악' ? `device://local/${audioName}` : 'default',
+      exportedAt: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `rhythm_quest_${new Date().getTime()}.json`;
+    link.download = `rhythm_quest_settings_${new Date().getTime()}.json`;
     link.click();
+    URL.revokeObjectURL(url);
   };
 
-  const handleImport = (file: File) => {
+  const handleImport = async (file: File) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const json = JSON.parse(e.target?.result as string);
         if (json.levels) setLevels(json.levels);
         if (json.levelDelays) setLevelDelays(json.levelDelays);
         if (typeof json.isAudioSynced === 'boolean') setIsAudioSynced(json.isAudioSynced);
         
-        // 음원 정보가 있으면 자동 등록
-        if (json.audioUrl && json.audioUrl.startsWith('http')) {
-          setAudioUrl(json.audioUrl);
-          setAudioName(json.audioName || '불러온 음원');
+        // 가져오기 시 저장된 음원 자동 매칭
+        if (json.audioName) {
+          const saved = await getSavedAudio();
+          if (saved && saved.name === json.audioName) {
+            if (audioUrl && audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
+            const url = URL.createObjectURL(saved.blob);
+            setAudioUrl(url);
+            setAudioName(saved.name);
+            setCurrentAudioBlob(saved.blob);
+            alert(`설정을 불러왔습니다. 등록된 음원(${json.audioName})이 기기에 있어 자동 연결되었습니다.`);
+          } else {
+            alert(`설정을 불러왔습니다. 음원(${json.audioName})이 기기에 저장되어 있지 않습니다. 수동으로 다시 업로드해 주세요.`);
+          }
+        } else {
+          alert("데이터를 성공적으로 불러왔습니다.");
         }
-        alert("데이터를 성공적으로 불러왔습니다.");
       } catch (e) { alert("파일 형식이 잘못되었습니다."); }
     };
     reader.readAsText(file);
@@ -320,19 +329,19 @@ const App: React.FC = () => {
       <main className="w-full flex-grow flex flex-col items-center justify-center gap-12 mb-8 relative">
         {status === GameStatus.FINISHED ? (
           <div className="w-full max-w-md bg-white p-12 rounded-[3rem] shadow-2xl flex flex-col items-center gap-8 animate-in zoom-in duration-500">
-             <div className="w-24 h-24 bg-stone-900 text-amber-500 rounded-full flex items-center justify-center text-4xl">
+             <div className="w-24 h-24 bg-stone-900 text-amber-500 rounded-full flex items-center justify-center text-4xl shadow-xl">
                <i className="fa-solid fa-flag-checkered"></i>
              </div>
              <div className="text-center">
                <h2 className="text-4xl font-black text-stone-800 korean-gothic">도전 완료!</h2>
-               <p className="text-stone-400 font-bold mt-2">최종 기록: <span className="text-stone-800 font-mono">{formatTime(elapsedTime)}</span></p>
+               <p className="text-stone-400 font-bold mt-2">최종 소요 시간: <span className="text-stone-800 font-mono">{formatTime(elapsedTime)}</span></p>
              </div>
-             <button onClick={() => setStatus(GameStatus.IDLE)} className="w-full py-5 bg-stone-800 text-white rounded-2xl font-black text-xl hover:bg-stone-700">처음으로</button>
+             <button onClick={() => setStatus(GameStatus.IDLE)} className="w-full py-5 bg-stone-800 text-white rounded-2xl font-black text-xl hover:bg-stone-700 shadow-lg active:scale-95 transition-all">다시 도전</button>
           </div>
         ) : loading ? (
           <div className="flex flex-col items-center gap-8 py-20 animate-pulse">
             <div className="w-24 h-24 border-[12px] border-amber-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-amber-800 font-black text-3xl korean-gothic">AI 스테이지 최적화 중...</p>
+            <p className="text-amber-800 font-black text-3xl korean-gothic">AI 스테이지 설계 중...</p>
           </div>
         ) : (
           <RhythmBoard 
@@ -356,7 +365,7 @@ const App: React.FC = () => {
             bpm={currentLevel.bpm}
             setBpm={(val) => setLevels(prev => prev.map(l => l.id === currentLevelId ? { ...l, bpm: val } : l))}
             onStart={startGame}
-            onStop={stopGame}
+            onStop={() => { finishGame(); setIsStoppedManually(true); bgMusicRef.current?.pause(); bgMusicRef.current!.currentTime = 0; }}
             onPause={() => { isPlayingRef.current = false; setStatus(GameStatus.PAUSED); bgMusicRef.current?.pause(); }}
             onResume={() => { isPlayingRef.current = true; setStatus(GameStatus.PLAYING); bgMusicRef.current?.play(); startTimeRef.current = performance.now() - elapsedTime; }}
             onThemeChange={handleThemeChange}
@@ -374,7 +383,7 @@ const App: React.FC = () => {
             updateDelay={(idx, val) => setLevelDelays(prev => { const next = [...prev]; next[idx] = val; return next; })}
             onExport={handleExport}
             onImport={handleImport}
-            onSaveCurrent={() => alert("현재 설정이 브라우저에 저장되었습니다.")}
+            onSaveCurrent={() => alert("현재 설정이 기기에 저장되었습니다.")}
             onSaveAudioToDevice={() => alert("음원이 저장되었습니다.")}
             onResetAudio={async () => { await clearSavedAudio(); setAudioUrl(DEFAULT_AUDIO_URL); setAudioName('기본 배경음악'); }}
             loading={loading}
@@ -384,10 +393,10 @@ const App: React.FC = () => {
 
       <footer className="w-full flex justify-between items-center text-stone-400 text-xs font-black px-4 py-6 border-t border-stone-200">
         <div className="flex gap-4">
-          <span><i className="fa-solid fa-stopwatch mr-1"></i>PRECISION TIMER</span>
+          <span><i className="fa-solid fa-stopwatch mr-1"></i>정밀 타이머 구동</span>
           <span><i className="fa-solid fa-music mr-1"></i>BPM: {currentLevel.bpm}</span>
         </div>
-        <p className="tracking-[0.3em] uppercase">RHYTHM WORD QUEST V6.8.0</p>
+        <p className="tracking-[0.3em] uppercase">RHYTHM WORD QUEST V6.9.0</p>
       </footer>
     </div>
   );

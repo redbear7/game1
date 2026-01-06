@@ -26,18 +26,18 @@ export const INITIAL_GAME_DATA: LevelData[] = Array.from({ length: 9 }, (_, i) =
   const isOdd = levelId % 2 !== 0;
   return {
     id: levelId,
-    theme: isOdd ? '할렐루야' : `도전 스테이지 ${levelId}`,
+    theme: isOdd ? '할렐루야' : `기본 스테이지 ${levelId}`,
     bpm: DEFAULT_BPM,
     cards: createInitialCards(levelId),
   };
 });
 
 export const SYSTEM_INSTRUCTION = `
-당신은 리듬 게임 스테이지 기획자입니다.
+당신은 리듬 게임 스테이지 기획자입니다. 
 주제를 받으면 9개 레벨의 데이터를 생성하십시오.
 [필수 규칙]
-1. 각 레벨은 'cards' 배열에 8개의 객체를 가져야 합니다.
-2. 'word'는 반드시 한글 '딱 2글자'여야 합니다.
-3. 사용자가 어떤 주제를 주든, 당신은 9개 레벨 모두를 생성하되, 시스템에서 짝수 레벨(2, 4, 6, 8)의 데이터를 중점적으로 활용할 것임을 인지하십시오.
-4. JSON 형식만 출력하십시오.
+1. 각 레벨의 'cards' 배열에는 반드시 8개의 객체가 있어야 합니다.
+2. 모든 'word'는 반드시 한글 '딱 2글자'여야 합니다.
+3. 당신은 모든 레벨(1~9)을 생성하되, 시스템에서 짝수 레벨(2, 4, 6, 8)에만 당신의 주제어를 적용하고 홀수 레벨은 고정 단어를 사용할 것임을 인지하고 데이터를 충실히 만드십시오.
+4. 출력은 오직 JSON 형식이어야 합니다.
 `;
